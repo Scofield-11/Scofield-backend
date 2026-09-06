@@ -11,24 +11,22 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
-DB_SSL_CA = os.getenv("DB_SSL_CA")
 
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-connect_args = {}
-if DB_SSL_CA:
-    connect_args["ssl"] = {"ca": DB_SSL_CA}
-else:
-    connect_args["ssl"] = {"ssl_disabled": False}
+# Xác định đường dẫn tuyệt đối đến file ca.pem (giả sử đặt cùng thư mục với database.py)
+CA_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ca.pem")
 
+# Thêm connect_args để cấu hình SSL trỏ tới file
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args=connect_args,
-    pool_pre_ping=True,
-    pool_recycle=280,
-    pool_size=5,
-    max_overflow=10
+    connect_args={
+        "ssl": {
+            "ca": CA_FILE_PATH
+        }
+    }
 )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
