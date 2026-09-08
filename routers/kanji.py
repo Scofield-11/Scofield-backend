@@ -62,6 +62,9 @@ def update_kanji(kanji_id: int, payload: schemas.KanjiUpdate, db: Session = Depe
     db_kanji = db.query(models.Kanji).filter(models.Kanji.id == kanji_id).first()
     if not db_kanji:
         raise HTTPException(status_code=404, detail="Không tìm thấy chữ Kanji")
+        
+    if not payload.kanji.strip() or not payload.hanviet.strip() or not payload.hiragana.strip() or not payload.meaning.strip():
+        raise HTTPException(status_code=400, detail="Không được để trống các trường thông tin Kanji")
     
     db_kanji.kanji = payload.kanji.strip()
     db_kanji.hanviet = payload.hanviet.strip()
