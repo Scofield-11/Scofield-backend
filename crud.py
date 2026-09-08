@@ -110,15 +110,10 @@ def create_set_with_vocabularies(db: Session, title: str, raw_text: str, folder_
         if '|' in line_clean:
             parts = [p.strip() for p in line_clean.split('|')]
             word = parts[0]
-            if len(parts) >= 3:
-                furigana = parts[1] if parts[1] else None
-                meaning = parts[2]
-            else:
-                furigana = None
-                meaning = parts[1]
+            meaning = parts[1] if len(parts) >= 2 else ""
             
             if word and meaning:
-                new_vocab = models.Vocabulary(word=word, furigana=furigana, meaning=meaning, set_id=new_set.id)
+                new_vocab = models.Vocabulary(word=word, meaning=meaning, set_id=new_set.id)
                 db.add(new_vocab)
                 imported_count += 1
             else:

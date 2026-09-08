@@ -5,7 +5,6 @@ from fastapi import HTTPException
 
 class VocabularyBase(BaseModel):
     word: str = Field(..., max_length=255)
-    furigana: Optional[str] = Field(None, max_length=255)
     meaning: str = Field(..., max_length=500)
 
     @field_validator('word', 'meaning')

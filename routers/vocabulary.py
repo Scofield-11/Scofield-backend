@@ -64,18 +64,12 @@ async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), f
     
     for row in reader:
         if len(row) >= 2:
-            if len(row) >= 3:
-                word = row[0].strip()
-                furigana = row[1].strip()
-                meaning = row[2].strip()
-            else:
-                word = row[0].strip()
-                furigana = ""
-                meaning = row[1].strip()
+            word = row[0].strip()
+            meaning = row[1].strip()
                 
             # Bỏ qua header nếu có
             if word and meaning and word.lower() != "word":
-                raw_lines.append(f"{word} | {furigana} | {meaning}")
+                raw_lines.append(f"{word} | {meaning}")
                 
     if not raw_lines:
         raise HTTPException(status_code=400, detail="Không tìm thấy dữ liệu hợp lệ trong file CSV")
@@ -94,7 +88,6 @@ async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), f
 def create_single_vocabulary(payload: schemas.VocabularyCreate, db: Session = Depends(get_db)):
     new_vocab = models.Vocabulary(
         word=payload.word.strip(),
-        furigana=payload.furigana.strip() if payload.furigana else None,
         meaning=payload.meaning.strip(),
         set_id=payload.set_id
     )
@@ -161,7 +154,6 @@ def update_vocabulary(vocab_id: int, payload: schemas.VocabularyUpdate, db: Sess
         raise HTTPException(status_code=404, detail="Không tìm thấy từ vựng")
     
     db_vocab.word = payload.word.strip()
-    db_vocab.furigana = payload.furigana.strip() if payload.furigana else None
     db_vocab.meaning = payload.meaning.strip()
     db.commit()
     db.refresh(db_vocab)

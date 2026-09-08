@@ -21,7 +21,6 @@ class Vocabulary(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     word = Column(String(255), nullable=False)
-    furigana = Column(String(255), nullable=True)
     meaning = Column(String(500), nullable=False)
     set_id = Column(Integer, ForeignKey("sets.id", ondelete="CASCADE"), nullable=True)
     
