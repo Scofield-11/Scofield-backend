@@ -24,22 +24,22 @@ def import_kanji_sets(payload: schemas.KanjiBulkImportRequest, db: Session = Dep
     errors = []
     
     for idx, line in enumerate(lines):
-        line_clean = line.strip()
-        if not line_clean:
-            continue
-        parts = [p.strip() for p in line_clean.split('|')]
-        if len(parts) >= 4:
-            kanji = models.Kanji(
-                kanji=parts[0],
-                hanviet=parts[1],
-                hiragana=parts[2],
-                meaning=parts[3],
-                kanji_set_id=new_set.id
-            )
-            db.add(kanji)
-            imported_count += 1
-        else:
-            errors.append(f"Dòng {idx + 1}: Thiếu cột dữ liệu (Yêu cầu 4 cột).")
+            line_clean = line.strip()
+            if not line_clean:
+                continue
+            parts = [p.strip() for p in line_clean.split('|')]
+            if len(parts) >= 4 and all(parts[:4]):
+                kanji = models.Kanji(
+                    kanji=parts[0],
+                    hanviet=parts[1],
+                    hiragana=parts[2],
+                    meaning=parts[3],
+                    kanji_set_id=new_set.id
+                )
+                db.add(kanji)
+                imported_count += 1
+            else:
+                errors.append(f"Dòng {idx + 1}: Thiếu hoặc bị trống dữ liệu (Yêu cầu nhập đủ 4 cột).")
     
     if imported_count == 0:
         db.rollback()
