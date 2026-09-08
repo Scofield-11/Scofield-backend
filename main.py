@@ -32,6 +32,7 @@ app.add_middleware(
 # Đăng ký các Routers
 app.include_router(vocabulary.router)
 app.include_router(exam.router)
+app.include_router(kanji.router)
 
 @app.get("/")
 def health_check():
