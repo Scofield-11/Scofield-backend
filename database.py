@@ -14,17 +14,15 @@ DB_NAME = os.getenv("DB_NAME")
 
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Xác định đường dẫn tuyệt đối đến file ca.pem (giả sử đặt cùng thư mục với database.py)
-CA_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ca.pem")
+# Cấu hình SSL linh hoạt: bỏ qua ca.pem nếu đang chạy localhost
+connect_args = {}
+if DB_HOST not in ["localhost", "127.0.0.1"]:
+    CA_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ca.pem")
+    connect_args["ssl"] = {"ca": CA_FILE_PATH}
 
-# Thêm connect_args để cấu hình SSL trỏ tới file
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={
-        "ssl": {
-            "ca": CA_FILE_PATH
-        }
-    }
+    connect_args=connect_args
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
