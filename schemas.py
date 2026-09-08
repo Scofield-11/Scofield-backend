@@ -118,6 +118,13 @@ class KanjiBase(BaseModel):
     hiragana: str = Field(..., max_length=255)
     meaning: str = Field(..., max_length=500)
 
+    @field_validator('kanji', 'hanviet', 'hiragana', 'meaning')
+    @classmethod
+    def check_not_empty(cls, v):
+        if not v or not str(v).strip():
+            raise HTTPException(status_code=400, detail="Các trường thông tin Kanji không được để trống")
+        return str(v).strip()
+
 class KanjiOut(KanjiBase):
     id: int
     kanji_set_id: Optional[int] = None
@@ -131,7 +138,7 @@ class KanjiUpdate(KanjiBase):
 class KanjiSetOut(BaseModel):
     id: int
     title: str
-    created_at: Optional[datetime] = None
+    created_at: datetime
     kanjis: List[KanjiOut] = []
 
     class Config:
