@@ -64,3 +64,45 @@ class ExamHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     exam = relationship("Exam")
+
+class KanjiSet(Base):
+    __tablename__ = "kanji_sets"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    kanjis = relationship("Kanji", back_populates="kanji_set", cascade="all, delete-orphan")
+
+class Kanji(Base):
+    __tablename__ = "kanjis"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    kanji = Column(String(255), nullable=False)
+    hanviet = Column(String(255), nullable=False)
+    hiragana = Column(String(255), nullable=False)
+    meaning = Column(String(500), nullable=False)
+    kanji_set_id = Column(Integer, ForeignKey("kanji_sets.id", ondelete="CASCADE"), nullable=True)
+
+    kanji_set = relationship("KanjiSet", back_populates="kanjis")
+
+class KanjiSet(Base):
+    __tablename__ = "kanji_sets"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    kanjis = relationship("Kanji", back_populates="kanji_set", cascade="all, delete-orphan")
+
+class Kanji(Base):
+    __tablename__ = "kanjis"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    kanji = Column(String(255), nullable=False)
+    hanviet = Column(String(255), nullable=False)
+    hiragana = Column(String(255), nullable=False)
+    meaning = Column(String(500), nullable=False)
+    kanji_set_id = Column(Integer, ForeignKey("kanji_sets.id", ondelete="CASCADE"), nullable=True)
+
+    kanji_set = relationship("KanjiSet", back_populates="kanjis")
