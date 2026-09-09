@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 import models
 import schemas
 from database import get_db
@@ -11,7 +12,35 @@ router = APIRouter(
 
 @router.get("/kanji-sets", response_model=list[schemas.KanjiSetOut])
 def get_kanji_sets(db: Session = Depends(get_db)):
-    return db.query(models.KanjiSet).options(joinedload(models.KanjiSet.kanjis)).order_by(models.KanjiSet.id.desc()).all()
+    sets_data = db.query(
+        models.KanjiSet.id,
+        models.KanjiSet.title,
+        models.KanjiSet.created_at,
+        func.count(models.Kanji.id).label("vocab_count")
+    ).outerjoin(models.Kanji, models.KanjiSet.id == models.Kanji.kanji_set_id)\
+     .group_by(models.KanjiSet.id).order_by(models.KanjiSet.id.desc()).all()
+     
+    return [{"id": s.id, "title": s.title, "created_at": s.created_at, "vocab_count": s.vocab_count} for s in sets_data]
+
+@router.get("/kanji-sets/{set_id}", response_model=schemas.KanjiSetOut)
+def get_kanji_set_detail(set_id: int, db: Session = Depends(get_db)):
+    db_set = db.query(models.KanjiSet).options(joinedload(models.KanjiSet.kanjis)).filter(models.KanjiSet.id == set_id).first()
+    if not db_set:
+        raise HTTPException(status_code=404, detail="Không tìm thấy học phần Kanji")
+    return db_set
+
+@router.get("/search-kanji", response_model=list[schemas.KanjiOut])
+def search_kanji(q: str, db: Session = Depends(get_db)):
+    if not q.strip():
+        return []
+    search_query = f"%{q.strip()}%"
+    results = db.query(models.Kanji).filter(
+        (models.Kanji.kanji.ilike(search_query)) | 
+        (models.Kanji.hanviet.ilike(search_query)) |
+        (models.Kanji.hiragana.ilike(search_query)) |
+        (models.Kanji.meaning.ilike(search_query))
+    ).limit(10).all()
+    return results
 
 @router.post("/kanji-sets/bulk-import")
 def import_kanji_sets(payload: schemas.KanjiBulkImportRequest, db: Session = Depends(get_db)):

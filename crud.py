@@ -130,7 +130,17 @@ def create_set_with_vocabularies(db: Session, title: str, raw_text: str, folder_
 
 # Cập nhật các hàm lấy dữ liệu
 def get_all_sets(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Set).options(joinedload(models.Set.vocabularies)).offset(skip).limit(limit).all()
+    return db.query(
+        models.Set.id,
+        models.Set.title,
+        models.Set.folder_path,
+        models.Set.created_at,
+        func.count(models.Vocabulary.id).label("vocab_count")
+    ).outerjoin(models.Vocabulary, models.Set.id == models.Vocabulary.set_id)\
+     .group_by(models.Set.id).offset(skip).limit(limit).all()
+
+def get_set_detail(db: Session, set_id: int):
+    return db.query(models.Set).options(joinedload(models.Set.vocabularies)).filter(models.Set.id == set_id).first()
 
 def get_all_vocabularies(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Vocabulary).offset(skip).limit(limit).all()

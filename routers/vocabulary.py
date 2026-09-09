@@ -19,7 +19,26 @@ def get_global_stats(db: Session = Depends(get_db)):
 # API Lấy danh sách tất cả học phần kèm từ vựng bên trong (Có phân trang)
 @router.get("/sets", response_model=list[schemas.SetOut])
 def get_all_sets(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
-    return crud.get_all_sets(db, skip=skip, limit=limit)
+    sets_data = crud.get_all_sets(db, skip=skip, limit=limit)
+    return [{"id": s.id, "title": s.title, "folder_path": s.folder_path, "created_at": s.created_at, "vocab_count": s.vocab_count} for s in sets_data]
+
+@router.get("/sets/{set_id}", response_model=schemas.SetOut)
+def get_set_detail(set_id: int, db: Session = Depends(get_db)):
+    db_set = crud.get_set_detail(db, set_id)
+    if not db_set:
+        raise HTTPException(status_code=404, detail="Không tìm thấy học phần")
+    return db_set
+
+@router.get("/search", response_model=list[schemas.VocabularyOut])
+def search_vocabulary(q: str, db: Session = Depends(get_db)):
+    if not q.strip():
+        return []
+    search_query = f"%{q.strip()}%"
+    results = db.query(models.Vocabulary).filter(
+        (models.Vocabulary.word.ilike(search_query)) | 
+        (models.Vocabulary.meaning.ilike(search_query))
+    ).limit(10).all()
+    return results
 
 # API Lấy tất cả từ vựng (Có phân trang)
 @router.get("/vocabularies", response_model=list[schemas.VocabularyOut])

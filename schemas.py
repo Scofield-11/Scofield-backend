@@ -51,7 +51,8 @@ class SetCreate(SetBase):
 class SetOut(SetBase):
     id: int
     created_at: datetime
-    vocabularies: List[VocabularyOut] = []
+    vocab_count: int = 0
+    vocabularies: Optional[List[VocabularyOut]] = None
 
     class Config:
         from_attributes = True
@@ -139,7 +140,8 @@ class KanjiSetOut(BaseModel):
     id: int
     title: str
     created_at: datetime
-    kanjis: List[KanjiOut] = []
+    vocab_count: int = 0
+    kanjis: Optional[List[KanjiOut]] = None
 
     class Config:
         from_attributes = True
