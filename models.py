@@ -65,6 +65,19 @@ class ExamHistory(Base):
 
     exam = relationship("Exam")
 
+class TestHistory(Base):
+    __tablename__ = "test_histories"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    set_id = Column(Integer, ForeignKey("sets.id", ondelete="CASCADE"), nullable=True)
+    title = Column(String(255))
+    score = Column(Integer)
+    total = Column(Integer)
+    wrong_details = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    vocab_set = relationship("Set")
+
 class KanjiSet(Base):
     __tablename__ = "kanji_sets"
 

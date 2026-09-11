@@ -113,6 +113,20 @@ class ExamHistoryOut(ExamHistoryCreate):
     class Config:
         from_attributes = True
 
+class TestHistoryCreate(BaseModel):
+    set_id: Optional[int] = None
+    title: str = Field(..., max_length=255)
+    score: int
+    total: int
+    wrong_details: Any
+
+class TestHistoryOut(TestHistoryCreate):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class KanjiBase(BaseModel):
     kanji: str = Field(..., max_length=255)
     hanviet: str = Field(..., max_length=255)

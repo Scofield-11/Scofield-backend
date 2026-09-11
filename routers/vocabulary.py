@@ -188,3 +188,48 @@ def delete_vocabulary(vocab_id: int, db: Session = Depends(get_db)):
     db.delete(db_vocab)
     db.commit()
     return {"message": "Đã xóa từ vựng"}
+
+@router.post("/test-history")
+def save_test_history(payload: schemas.TestHistoryCreate, db: Session = Depends(get_db)):
+    history = models.TestHistory(
+        set_id=payload.set_id,
+        title=payload.title,
+        score=payload.score,
+        total=payload.total,
+        wrong_details=payload.wrong_details
+    )
+    db.add(history)
+    db.commit()
+    
+    # Giữ lại tối đa 10 lần test gần nhất
+    count = db.query(models.TestHistory).count()
+    if count > 10:
+        oldest_records = db.query(models.TestHistory).order_by(models.TestHistory.created_at.asc()).limit(count - 10).all()
+        for record in oldest_records:
+            db.delete(record)
+        db.commit()
+        
+    return {"message": "Đã lưu lịch sử test"}
+
+@router.get("/test-history")
+def get_test_history(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    histories = db.query(models.TestHistory).order_by(models.TestHistory.created_at.desc()).offset(skip).limit(limit).all()
+    result = []
+    for h in histories:
+        result.append({
+            "id": h.id,
+            "setId": h.set_id,
+            "title": h.title,
+            "score": h.score,
+            "total": h.total,
+            "date": h.created_at.strftime("%d/%m/%Y"), # Lấy ngày để UI gộp nhóm
+            "full_date": h.created_at.strftime("%H:%M - %d/%m/%Y"),
+            "wrongDetails": h.wrong_details
+        })
+    return result
+
+@router.delete("/test-history/all")
+def clear_test_history(db: Session = Depends(get_db)):
+    db.query(models.TestHistory).delete()
+    db.commit()
+    return {"message": "Đã xóa toàn bộ lịch sử test"}
