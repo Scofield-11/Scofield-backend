@@ -201,10 +201,10 @@ def save_test_history(payload: schemas.TestHistoryCreate, db: Session = Depends(
     db.add(history)
     db.commit()
     
-    # Giữ lại tối đa 10 lần test gần nhất
+    # Giữ lại tối đa 100 lần test gần nhất để không ảnh hưởng thuật toán tính Chuỗi (Streak)
     count = db.query(models.TestHistory).count()
-    if count > 10:
-        oldest_records = db.query(models.TestHistory).order_by(models.TestHistory.created_at.asc()).limit(count - 10).all()
+    if count > 100:
+        oldest_records = db.query(models.TestHistory).order_by(models.TestHistory.created_at.asc()).limit(count - 100).all()
         for record in oldest_records:
             db.delete(record)
         db.commit()
