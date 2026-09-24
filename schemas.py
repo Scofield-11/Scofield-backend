@@ -153,6 +153,7 @@ class KanjiUpdate(KanjiBase):
 class KanjiSetOut(BaseModel):
     id: int
     title: str
+    folder_path: Optional[str] = ""
     created_at: datetime
     vocab_count: int = 0
     kanjis: Optional[List[KanjiOut]] = None
@@ -163,6 +164,7 @@ class KanjiSetOut(BaseModel):
 class KanjiBulkImportRequest(BaseModel):
     title: str = Field(..., max_length=255)
     raw_text: str
+    folder_path: Optional[str] = ""
 
     @field_validator('title')
     @classmethod

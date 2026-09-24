@@ -15,12 +15,13 @@ def get_kanji_sets(db: Session = Depends(get_db)):
     sets_data = db.query(
         models.KanjiSet.id,
         models.KanjiSet.title,
+        models.KanjiSet.folder_path,
         models.KanjiSet.created_at,
         func.count(models.Kanji.id).label("vocab_count")
     ).outerjoin(models.Kanji, models.KanjiSet.id == models.Kanji.kanji_set_id)\
      .group_by(models.KanjiSet.id).order_by(models.KanjiSet.id.desc()).all()
      
-    return [{"id": s.id, "title": s.title, "created_at": s.created_at, "vocab_count": s.vocab_count} for s in sets_data]
+    return [{"id": s.id, "title": s.title, "folder_path": s.folder_path, "created_at": s.created_at, "vocab_count": s.vocab_count} for s in sets_data]
 
 @router.get("/kanji-sets/{set_id}", response_model=schemas.KanjiSetOut)
 def get_kanji_set_detail(set_id: int, db: Session = Depends(get_db)):
@@ -44,9 +45,13 @@ def search_kanji(q: str, db: Session = Depends(get_db)):
 
 @router.post("/kanji-sets/bulk-import")
 def import_kanji_sets(payload: schemas.KanjiBulkImportRequest, db: Session = Depends(get_db)):
-    new_set = models.KanjiSet(title=payload.title.strip())
+    new_set = models.KanjiSet(title=payload.title.strip(), folder_path=payload.folder_path)
     db.add(new_set)
     db.flush()
+
+    if not payload.raw_text or not payload.raw_text.strip():
+        db.commit()
+        return {"message": "Đã tạo thư mục Kanji rỗng.", "errors": []}
 
     lines = payload.raw_text.strip().split('\n')
     imported_count = 0

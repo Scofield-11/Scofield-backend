@@ -83,6 +83,7 @@ class KanjiSet(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(255), nullable=False)
+    folder_path = Column(String(500), default="")  # BỔ SUNG DÒNG NÀY
     created_at = Column(DateTime, default=datetime.utcnow)
     
     kanjis = relationship("Kanji", back_populates="kanji_set", cascade="all, delete-orphan")
