@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
+import models
 from routers import vocabulary, exam, kanji
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
-
 
 app = FastAPI(title="Quizlet Clone API")
 

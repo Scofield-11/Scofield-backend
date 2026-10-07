@@ -125,3 +125,9 @@ def get_all_history(db: Session = Depends(get_db)):
             "wrongDetails": h.wrong_details
         })
     return result
+
+@router.delete("/history/all")
+def clear_all_history(db: Session = Depends(get_db)):
+    db.query(models.ExamHistory).delete()
+    db.commit()
+    return {"message": "Đã xóa toàn bộ lịch sử thi"}

@@ -6,12 +6,29 @@ from fastapi import HTTPException
 class VocabularyBase(BaseModel):
     word: str = Field(..., max_length=255)
     meaning: str = Field(..., max_length=500)
+    hanviet: Optional[str] = ""
+    hiragana: Optional[str] = ""
+    language: Optional[str] = "ja"
 
     @field_validator('word', 'meaning')
     @classmethod
     def check_not_empty(cls, v, info):
         if not v or not str(v).strip():
             raise HTTPException(status_code=400, detail=f"Từ vựng và ý nghĩa không được để chuỗi rỗng")
+        return str(v).strip()
+
+    @field_validator('hanviet', 'hiragana', mode='before')
+    @classmethod
+    def default_empty_string(cls, v):
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator('language', mode='before')
+    @classmethod
+    def default_language(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return "ja"
         return str(v).strip()
 
 class VocabularyCreate(VocabularyBase):
@@ -38,11 +55,21 @@ class StarUpdate(BaseModel):
 class SetBase(BaseModel):
     title: str = Field(..., max_length=255)
     folder_path: Optional[str] = ""
+    language: Optional[str] = "ja"
+    type: Optional[str] = "vocab" # BỔ SUNG DÒNG NÀY
+    
     @field_validator('title')
     @classmethod
     def check_title(cls, v):
         if not v or not str(v).strip():
             raise HTTPException(status_code=400, detail="Tên học phần không được để trống")
+        return str(v).strip()
+
+    @field_validator('language', mode='before')
+    @classmethod
+    def default_language(cls, v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return "ja"
         return str(v).strip()
 
 class SetCreate(SetBase):
@@ -61,6 +88,7 @@ class BulkImportRequest(BaseModel):
     title: str = Field(..., max_length=255)
     raw_text: str
     folder_path: Optional[str] = ""
+    language: Optional[str] = "ja"
     @field_validator('title')
     @classmethod
     def check_title(cls, v):
@@ -127,49 +155,5 @@ class TestHistoryOut(TestHistoryCreate):
     class Config:
         from_attributes = True
 
-class KanjiBase(BaseModel):
-    kanji: str = Field(..., max_length=255)
-    hanviet: str = Field(..., max_length=255)
-    hiragana: str = Field(..., max_length=255)
-    meaning: str = Field(..., max_length=500)
 
-    @field_validator('kanji', 'hanviet', 'hiragana', 'meaning')
-    @classmethod
-    def check_not_empty(cls, v):
-        if not v or not str(v).strip():
-            raise HTTPException(status_code=400, detail="Các trường thông tin Kanji không được để trống")
-        return str(v).strip()
-
-class KanjiOut(KanjiBase):
-    id: int
-    kanji_set_id: Optional[int] = None
-
-    class Config:
-        from_attributes = True
-
-class KanjiUpdate(KanjiBase):
-    pass
-
-class KanjiSetOut(BaseModel):
-    id: int
-    title: str
-    folder_path: Optional[str] = ""
-    created_at: datetime
-    vocab_count: int = 0
-    kanjis: Optional[List[KanjiOut]] = None
-
-    class Config:
-        from_attributes = True
-
-class KanjiBulkImportRequest(BaseModel):
-    title: str = Field(..., max_length=255)
-    raw_text: str
-    folder_path: Optional[str] = ""
-
-    @field_validator('title')
-    @classmethod
-    def check_title(cls, v):
-        if not v or not str(v).strip():
-            raise HTTPException(status_code=400, detail="Tên học phần không được để trống")
-        return str(v).strip()
 

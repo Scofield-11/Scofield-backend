@@ -9,6 +9,8 @@ class Set(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(255), nullable=False)
     folder_path = Column(String(500), default="")  # BỔ SUNG DÒNG NÀY
+    language = Column(String(20), default="ja")
+    type = Column(String(50), default="vocab") # BỔ SUNG CỘT TYPE
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Quan hệ 1 học phần có nhiều từ vựng
@@ -22,6 +24,9 @@ class Vocabulary(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     word = Column(String(255), nullable=False)
     meaning = Column(String(500), nullable=False)
+    hanviet = Column(String(255), nullable=True, default="")
+    hiragana = Column(String(255), nullable=True, default="")
+    language = Column(String(20), default="ja")
     set_id = Column(Integer, ForeignKey("sets.id", ondelete="CASCADE"), nullable=True)
     
     # Các trường phục vụ thuật toán Spaced Repetition (SRS)
@@ -78,24 +83,3 @@ class TestHistory(Base):
 
     vocab_set = relationship("Set")
 
-class KanjiSet(Base):
-    __tablename__ = "kanji_sets"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    title = Column(String(255), nullable=False)
-    folder_path = Column(String(500), default="")  # BỔ SUNG DÒNG NÀY
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    kanjis = relationship("Kanji", back_populates="kanji_set", cascade="all, delete-orphan")
-
-class Kanji(Base):
-    __tablename__ = "kanjis"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    kanji = Column(String(255), nullable=False)
-    hanviet = Column(String(255), nullable=False)
-    hiragana = Column(String(255), nullable=False)
-    meaning = Column(String(500), nullable=False)
-    kanji_set_id = Column(Integer, ForeignKey("kanji_sets.id", ondelete="CASCADE"), nullable=True)
-
-    kanji_set = relationship("KanjiSet", back_populates="kanjis")

@@ -20,7 +20,18 @@ def get_global_stats(db: Session = Depends(get_db)):
 @router.get("/sets", response_model=list[schemas.SetOut])
 def get_all_sets(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
     sets_data = crud.get_all_sets(db, skip=skip, limit=limit)
-    return [{"id": s.id, "title": s.title, "folder_path": s.folder_path, "created_at": s.created_at, "vocab_count": s.vocab_count} for s in sets_data]
+    return [
+        {
+            "id": s.id, 
+            "title": s.title, 
+            "folder_path": s.folder_path, 
+            "language": s.language or "ja", 
+            "type": s.type or "vocab",
+            "created_at": s.created_at, 
+            "vocab_count": s.vocab_count,
+            "vocabularies": [] # Tối ưu: Trả về mảng rỗng để không bị tràn RAM
+        } for s in sets_data
+    ]
 
 @router.get("/sets/{set_id}", response_model=schemas.SetOut)
 def get_set_detail(set_id: int, db: Session = Depends(get_db)):
@@ -36,6 +47,8 @@ def search_vocabulary(q: str, db: Session = Depends(get_db)):
     search_query = f"%{q.strip()}%"
     results = db.query(models.Vocabulary).filter(
         (models.Vocabulary.word.ilike(search_query)) | 
+        (models.Vocabulary.hanviet.ilike(search_query)) |
+        (models.Vocabulary.hiragana.ilike(search_query)) |
         (models.Vocabulary.meaning.ilike(search_query))
     ).limit(10).all()
     return results
@@ -50,7 +63,9 @@ def import_bulk_vocabularies(payload: schemas.BulkImportRequest, db: Session = D
     if not payload.title.strip():
         raise HTTPException(status_code=400, detail="Tên học phần không được để trống")
         
-    imported_count, errors = crud.create_set_with_vocabularies(db, payload.title.strip(), payload.raw_text, payload.folder_path)
+    imported_count, errors = crud.create_set_with_vocabularies(
+        db, payload.title.strip(), payload.raw_text, payload.folder_path, payload.language or "ja", "vocab"
+    )
     
     if imported_count is None:
         raise HTTPException(status_code=400, detail="Không tìm thấy từ vựng hợp lệ nào. Kiểm tra lại định dạng.")
@@ -65,7 +80,7 @@ def import_bulk_vocabularies(payload: schemas.BulkImportRequest, db: Session = D
     }
 
 @router.post("/vocabularies/import-csv")
-async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), language: str = Form("ja"), file: UploadFile = File(...), db: Session = Depends(get_db)):
     if not title.strip():
         raise HTTPException(status_code=400, detail="Tên học phần không được để trống")
         
@@ -80,21 +95,39 @@ async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), f
         
     reader = csv.reader(io.StringIO(text))
     raw_lines = []
+    header_keywords = ["word", "từ vựng", "chữ hán", "kanji", "chữ hán/từ vựng"]
     
     for row in reader:
         if len(row) >= 2:
-            word = row[0].strip()
-            meaning = row[1].strip()
-                
-            # Bỏ qua header nếu có
-            if word and meaning and word.lower() != "word":
-                raw_lines.append(f"{word} | {meaning}")
+            first_col = row[0].strip().lower()
+            # Bỏ qua dòng tiêu đề
+            if first_col in header_keywords:
+                continue
+
+            if len(row) >= 4:
+                # 4 cột: Chữ Hán | Hán Việt | Cách đọc | Ý nghĩa
+                r0, r1, r2, r3 = row[0].strip(), row[1].strip(), row[2].strip(), row[3].strip()
+                if (r0 or r2) and r3:
+                    raw_lines.append(f"{r0} | {r1} | {r2} | {r3}")
+            elif len(row) == 3:
+                # 3 cột: Từ vựng | Cách đọc | Ý nghĩa
+                r0, r1, r2 = row[0].strip(), row[1].strip(), row[2].strip()
+                if (r0 or r1) and r2:
+                    raw_lines.append(f"{r0} | {r1} | {r2}")
+            else:
+                # 2 cột: Từ vựng | Ý nghĩa
+                word = row[0].strip()
+                meaning = row[1].strip()
+                if word and meaning:
+                    raw_lines.append(f"{word} | {meaning}")
                 
     if not raw_lines:
         raise HTTPException(status_code=400, detail="Không tìm thấy dữ liệu hợp lệ trong file CSV")
         
     raw_text = "\n".join(raw_lines)
-    imported_count, errors = crud.create_set_with_vocabularies(db, title.strip(), raw_text, folder_path)
+    imported_count, errors = crud.create_set_with_vocabularies(
+        db, title.strip(), raw_text, folder_path, language, "vocab"
+    )
     
     response_msg = f"Đã tạo học phần '{title}' với {imported_count} từ vựng từ file CSV."
     if errors:
@@ -105,9 +138,16 @@ async def import_csv_file(title: str = Form(...), folder_path: str = Form(""), f
 # API Thêm 1 từ vựng mới vào học phần có sẵn
 @router.post("/vocabularies", response_model=schemas.VocabularyOut)
 def create_single_vocabulary(payload: schemas.VocabularyCreate, db: Session = Depends(get_db)):
+    parent_set = None
+    if payload.set_id:
+        parent_set = db.query(models.Set).filter(models.Set.id == payload.set_id).first()
+    lang = parent_set.language if (parent_set and parent_set.language) else (payload.language or "ja")
     new_vocab = models.Vocabulary(
         word=payload.word.strip(),
+        hanviet=(payload.hanviet or "").strip(),
+        hiragana=(payload.hiragana or "").strip(),
         meaning=payload.meaning.strip(),
+        language=lang,
         set_id=payload.set_id
     )
     db.add(new_vocab)
@@ -173,7 +213,11 @@ def update_vocabulary(vocab_id: int, payload: schemas.VocabularyUpdate, db: Sess
         raise HTTPException(status_code=404, detail="Không tìm thấy từ vựng")
     
     db_vocab.word = payload.word.strip()
+    db_vocab.hanviet = (payload.hanviet or "").strip()
+    db_vocab.hiragana = (payload.hiragana or "").strip()
     db_vocab.meaning = payload.meaning.strip()
+    if payload.language:
+        db_vocab.language = payload.language.strip()
     db.commit()
     db.refresh(db_vocab)
     return db_vocab
@@ -233,3 +277,17 @@ def clear_test_history(db: Session = Depends(get_db)):
     db.query(models.TestHistory).delete()
     db.commit()
     return {"message": "Đã xóa toàn bộ lịch sử test"}
+
+@router.post("/kanji-sets/bulk-import")
+def import_kanji_sets(payload: schemas.BulkImportRequest, db: Session = Depends(get_db)):
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Tên học phần không được để trống")
+        
+    imported_count, errors = crud.create_set_with_vocabularies(
+        db, payload.title.strip(), payload.raw_text, payload.folder_path, "ja", "kanji"
+    )
+    
+    if imported_count is None:
+        raise HTTPException(status_code=400, detail="Không tìm thấy Kanji hợp lệ nào. Kiểm tra lại định dạng.")
+        
+    return {"message": f"Đã tạo học phần Kanji với {imported_count} từ.", "errors": errors}
