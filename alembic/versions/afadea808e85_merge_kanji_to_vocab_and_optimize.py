@@ -20,21 +20,27 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # 1. BẮT BUỘC xóa bảng con (kanjis) trước vì nó đang trỏ khóa ngoại tới bảng cha
-    op.drop_index('ix_kanjis_id', table_name='kanjis')
-    op.drop_table('kanjis')
+    # Bỏ qua lỗi nếu bảng hoặc khoá không tồn tại bằng Raw SQL "IF EXISTS"
     
-    # 2. Sau đó mới được phép xóa bảng cha (kanji_sets)
-    op.drop_index('ix_kanji_sets_id', table_name='kanji_sets')
-    op.drop_table('kanji_sets')
+    # 1. Xoá bảng con kanjis (Tự động xoá index kèm theo)
+    op.execute("DROP TABLE IF EXISTS kanjis;")
     
-    # 3. Thêm cột mới
-    op.add_column('sets', sa.Column('type', sa.String(length=50), nullable=True))
+    # 2. Xoá bảng cha kanji_sets
+    op.execute("DROP TABLE IF EXISTS kanji_sets;")
+    
+    # 3. Thêm cột mới. Sử dụng cơ chế kiểm tra thủ công để tránh lỗi nếu cột đã lỡ được tạo
+    conn = op.get_bind()
+    result = conn.execute(sa.text("SHOW COLUMNS FROM sets LIKE 'type'")).fetchone()
+    if not result:
+        op.add_column('sets', sa.Column('type', sa.String(length=50), nullable=True))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column('sets', 'type')
+    conn = op.get_bind()
+    result = conn.execute(sa.text("SHOW COLUMNS FROM sets LIKE 'type'")).fetchone()
+    if result:
+        op.drop_column('sets', 'type')
     
     # 1. Khi tạo lại thì BẮT BUỘC tạo bảng cha trước
     op.create_table('kanji_sets',
